@@ -23,7 +23,7 @@ if(isset($name)){
   echo '<h1>Hello ' . $name . '</h1>';
 }
 else{
-  echo '<h1>Hello user</h1>';
+  echo '<h1>Hello User</h1>';
 }
 
 if(isset($picture)){
