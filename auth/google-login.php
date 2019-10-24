@@ -1,87 +1,93 @@
 <?php
 
+use Router\Response as Response;
+use HttpRequest\Http as Http;
+use Mongo\Access as Access;
+use Mongo\User as User;
+
 $client = new Google_Client();
 $client->setAuthConfig('../credentials/credentials.json');
 $client->addScope('profile openid email');
 
-// Your redirect URI can be any registered URI, but in this example
-// we redirect back to this same page
-// $redirect_uri = 'http://' . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
-$redirect_uri = 'https://' . $_SERVER['HTTP_HOST'] . '/auth/google-login';
+/* Your redirect URI can be any registered URI...
+
+/* Redirect to this page */
+$redirect_uri = 'https://' . $_SERVER['HTTP_HOST'] . '/google/login';
+
 $client->setRedirectUri($redirect_uri);
+
+/**
+ * Set the prompt hint. Valid values are none, consent and select_account.
+ * If no value is specified and the user has not previously authorized
+ * access, then the user is shown a consent screen.
+ * @param $prompt string
+ *  {@code "none"} Do not display any authentication or consent screens. Must not be specified with other values.
+ *  {@code "consent"} Prompt the user for consent.
+ *  {@code "select_account"} Prompt the user to select an account.
+*/
+// $client->setConfig('prompt', 'select_account');
+/* or */
+$client->setPrompt("select_account");
 
 // authenticate code from Google OAuth Flow
 if (isset($_GET['code'])) {
-  $token = $client->fetchAccessTokenWithAuthCode($_GET['code']);
-  $client->setAccessToken($token['access_token']);
+    $token = $client->fetchAccessTokenWithAuthCode($_GET['code']);
+    $client->setAccessToken($token['access_token']);
 
-  // get profile info
-  $google_oauth = new Google_Service_Oauth2($client);
-  $google_account_info = $google_oauth->userinfo->get();
-  $email =  $google_account_info->email;
-  $name =  $google_account_info->name;
-  $locale = $google_account_info->locale;
-  $picture = $google_account_info->picture;
-  $verified_email = $google_account_info->verified_email;
-  $id = $google_account_info->id;
+    // get profile info
+    $google_oauth = new Google_Service_Oauth2($client);
+    $google_account_info = $google_oauth->userinfo->get();
+    $email =  $google_account_info->email;
+    $name =  $google_account_info->name;
+    $locale = $google_account_info->locale;
+    $picture = $google_account_info->picture;
+    $verified_email = $google_account_info->verified_email;
+    $googleID = $google_account_info->id;
 
-  // now you can use this profile info to create account in your website and make user logged in.
-?>
+// now you can use this profile info to create account in your website and make user logged in.
 
-<div class="profile">
+// start a new session associated with this user
+    $_SESSION['name'] = $name;
+    $_SESSION['email'] = $email;
+    $_SESSION['id'] = $googleID;
+    $_SESSION['picture'] = $picture;
+    $_SESSION['locale'] = $locale;
+    $_SESSION['verified_email'] = $verified_email;
+    $_SESSION['newlogin'] = true;
+    $_SESSION['username'] = $email;
 
-  <p>
-    <a href="/">Home</a>
-  </p>
+/* Make a request call to server to verify if this googleID is already saved
+* If Not, create a new user in next step;
+* If yes, skip next step.
+*/
 
-  <p>Nome: <?php echo $name?></p>
-  <p> Email: <?php echo $email?></p>
-  <p> Local: <?php echo $locale?></p>
-  <p><img src="<?php echo $picture?>" alt="profile picture" width="100px"> <br></p>
-  <p>
-    <?php
-    if($verified_email){
-      echo 'Email Verificado';
-    }else{
-      echo 'Email não verificado';
-    }?>
-  </p>
-  <p> Id: <?php echo $id?></p>
+$accessUri = Access :: clusterAccessUri();
+$user = new User($accessUri);
+$user->define();
 
-  <form action="/user/" method="post">
-    <input type="hidden" name="id" value="<?php echo $id?>">
-    <input type="hidden" name="name" value="<?php echo $name?>">
-    <input type="hidden" name="email" value="<?php echo $email?>">
-    <input type="hidden" name="verified_email" value="<?php echo $verified_email?>">
-    <input type="hidden" name="picture" value="<?php echo $picture?>">
-    <input type="hidden" name="locale" value="<?php echo $locale?>">
-    <input type="submit" value="ok">
-  </form>
+if (!$user->hasGoogleID($googleID)) {
 
-</div>
+    // Make an http request to create a new user on server on-the-fly
+    $http = new Http();
+    $url = 'https://' . $_SERVER['HTTP_HOST'] . '/user/create';
+    $data = [
+        "username" => $email,
+        'name' => $name,
+        'email' => $email,
+        "googleID" => $googleID,
+    ];
+    $http->postRequest($url, $data);
 
-<style>
-  .profile{
-    text-align: center;
-    margin-top: 100px;
-  }
-</style>
-
-<?php
 }
-else{
-?>
 
-  <button name="googleLogin"><p>Google Login</p></button>
-  <a href="<?php echo $client->createAuthUrl()?>"><p>Google Login</p></a>
+/*Redirect page to login window:
+* Uses Class Response, method redirect
+*/
+$res = new Response;
+$res->redirect("/login");
 
-<?php
-}
-?>
+} else {
 
-<script>
-document.querySelector("button[name='googleLogin']").onclick=function(){
-  window.open("<?php echo $client->createAuthUrl()?>" , "_blank", "width=600,height=500,left=200,top=100");
-  console.log("ok")
-};
-</script>
+    include_once($_SERVER['DOCUMENT_ROOT'] . "/forms/googleLoginButton.php");
+
+}?>

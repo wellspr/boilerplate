@@ -8,7 +8,7 @@
 
 <?php
 
-    include_once($_SERVER['DOCUMENT_ROOT'] . "/menu/menu.php");
+    include_once($_SERVER['DOCUMENT_ROOT'] . "/menu/userMenu.php");
 
     $file = $contentDirectory . "/" . $contentFileName . ".php";
     if (file_exists($file)) {

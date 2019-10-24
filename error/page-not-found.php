@@ -8,3 +8,7 @@
     <mailto href='mailto:admin@boilerplate.org?subject=feedback'>admin@boilerplate.org</a>
 
 </p>
+
+<p>
+    <a href="/">Home</a>
+</p>

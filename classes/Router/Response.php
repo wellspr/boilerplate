@@ -1,5 +1,7 @@
 <?php
 
+namespace Router;
+
 class Response
 {
 
@@ -19,6 +21,18 @@ class Response
     {
         echo $str;
 
+        exit;
+    }
+
+    public function redirect($url)
+    {
+        echo <<<EXCERPT
+
+        <script>
+            window.location.replace(" $url ");
+        </script>
+        
+EXCERPT;
         exit;
     }
 
